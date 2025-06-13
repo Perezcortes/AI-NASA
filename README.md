@@ -67,9 +67,9 @@ Este proyecto es una plataforma web interactiva que permite explorar el universo
 
 ## 📷 Espacio para Imágenes de Demostración
 
-1. ![Imagen1](./public/img/demo1.png)
-2. ![Imagen2](./public/img/demo2.png)
-3. ![Imagen3](./public/img/demo3.png)
+1. ![Imagen1](./public/img/imagen1.png)
+2. ![Imagen2](./public/img/imagen2.png)
+3. ![Imagen3](./public/img/imagen3.png)
 
 ---
 

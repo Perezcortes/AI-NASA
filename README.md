@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌌 Proyecto: Explorador del Universo con Voz e Inteligencia Artificial
 
-## Getting Started
+Este proyecto es una plataforma web interactiva que permite explorar el universo utilizando comandos de voz. Aprovechamos la **API de la NASA** y la **Web Speech API** para brindar una experiencia futurista e inmersiva.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 👨‍🚀 Características Principales
+
+- 🔭 Consultar datos astronómicos desde la API de la NASA.
+- 🎙️ Reconocimiento de voz con comandos como:
+  - `Dame información de Marte`
+  - `Noticias relevantes de hoy`
+  - `Los asteroides más peligrosos`
+  - `Ve a planetas`, `Ir a noticias`, `Volver al inicio`, etc.
+- 🧠 Navegación e interacción controladas por voz con botones tipo "🎤 Reconocimiento de voz".
+- 🧩 Arquitectura modular basada en microservicios:
+  - Componentes reutilizables (`components/`)
+  - Hooks personalizados (`hooks/`)
+  - Librerías auxiliares (`lib/`)
+  - Gestión de estado con Redux (`store/`)
+  - Middleware para flujos de lógica
+- 🛰️ Información en tiempo real desde múltiples endpoints de la NASA.
+
+---
+
+## 🛠️ Tecnologías Usadas
+
+| Tecnología | Logo |
+|-----------|------|
+| Next.js | <img src="https://icon.icepanel.io/Technology/png-shadow-512/Next.js.png" width="30"/> |
+| React | <img src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg" width="30"/> |
+| TypeScript | <img src="https://cdn.worldvectorlogo.com/logos/typescript.svg" width="30"/> |
+| Tailwind CSS | <img src="https://www.vectorlogo.zone/logos/tailwindcss/tailwindcss-icon.svg" width="30"/> |
+| Docker | <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" width="30"/> |
+| MySQL | <img src="https://www.svgrepo.com/show/303251/mysql-logo.svg" width="30"/> |
+| Redux Toolkit | <img src="https://raw.githubusercontent.com/reduxjs/redux/master/logo/logo.png" width="30"/> |
+| Web Speech API | 🎤 (API nativa del navegador) |
+| API de la NASA | 🪐 https://api.nasa.gov |
+
+---
+
+## 📁 Estructura del Proyecto (Demo)
+
+```
+/src
+  /app
+    /planetas
+    /noticias
+    /asteroides
+  /components
+  /hooks
+  /store
+  /middleware
+  /lib
+  /styles
+  /assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 👥 Equipo de Desarrollo
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Amaury Yamil**
+- **Jose Perez**
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📷 Espacio para Imágenes de Demostración
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. ![Imagen1](./public/img/demo1.png)
+2. ![Imagen2](./public/img/demo2.png)
+3. ![Imagen3](./public/img/demo3.png)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🚀 Instalación Rápida
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+git clone https://github.com/Perezcortes/ai-nasa.git
+cd ai-nasa
+npm install
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🧠 Comandos de Voz Soportados
+
+- `Dame información de Júpiter`
+- `Ir a noticias`
+- `Mostrar asteroides peligrosos`
+- `Regresar al inicio`
+- `Leer las noticias de hoy`
+- `¿Qué misiones hay activas?`
+
+---
+
+## 📦 Consideraciones Adicionales
+
+- Reconocimiento de voz optimizado para español.
+- Diseño responsivo y futurista con Tailwind CSS.
+- Compatibilidad con navegadores modernos.
+- Listo para producción con Docker y despliegue en plataformas como Vercel o Railway.
+
+---
+
+## 📄 Licencia
+
+MIT

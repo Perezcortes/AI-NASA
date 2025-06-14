@@ -1,8 +1,7 @@
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    turbo: false, // Usa Webpack en vez de Turbopack
+    turbo: {}, // debe ser un objeto, no booleano
   },
-};
-
-module.exports = nextConfig;
+  // otras configuraciones...
+}
+export default nextConfig;

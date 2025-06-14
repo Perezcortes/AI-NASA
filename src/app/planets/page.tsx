@@ -39,8 +39,8 @@ export default function PlanetsPage() {
                 {/* Efecto de planeta */}
                 <div 
                   className={`absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-20 blur-xl group-hover:opacity-30 transition-opacity ${
-                    planet.type === "Terrestrial" ? "bg-yellow-400" : 
-                    planet.type === "Gas Giant" ? "bg-orange-400" : "bg-blue-400"
+                    planet.type === "Terrestre" ? "bg-yellow-400" : 
+                    planet.type === "Gaseoso" ? "bg-orange-400" : "bg-blue-400"
                   }`}
                 />
                 
@@ -60,7 +60,7 @@ export default function PlanetsPage() {
                   
                   <div className="flex items-center text-sm text-gray-400 mb-4">
                     <FaGlobeAmericas className="mr-2" />
-                    <span>{planet.distanceFromSun.au} from Sun</span>
+                    <span>{planet.distanceFromSun.au} del Sol</span>
                   </div>
                   
                   <p className="text-gray-300 text-sm mb-6 line-clamp-2">
@@ -69,10 +69,10 @@ export default function PlanetsPage() {
                   
                   <div className="mt-auto flex justify-between items-center">
                     <span className="text-xs text-gray-500">
-                      {planet.moons.length} moon{planet.moons.length !== 1 ? "s" : ""}
+                      {planet.moons.length} luna{planet.moons.length !== 1 ? "s" : ""}
                     </span>
                     <span className="text-xs px-2 py-1 rounded bg-gray-700/50 text-gray-300">
-                      Explore →
+                      Explorar →
                     </span>
                   </div>
                 </div>

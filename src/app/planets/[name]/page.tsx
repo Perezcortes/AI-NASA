@@ -1,44 +1,239 @@
-import { planets } from "../../data/planets";
-import { FaTemperatureHigh, FaWeight, FaMoon, FaSun } from "react-icons/fa";
+'use client';
+
+import { useState, useEffect } from "react";
+import { use } from 'react';
+import { FaTemperatureHigh, FaWeight, FaMoon, FaSun, FaLanguage, FaSpinner } from "react-icons/fa";
 import { GiOrbital } from "react-icons/gi";
 import { MdExplore } from "react-icons/md";
 import PlanetModel from "../../../components/PlanetModel";
+import { planets } from "../../data/planets";
 
 async function getVideos(planet: string) {
+  const planetNames: Record<string, string> = {
+    'mercurio': 'mercury',
+    'venus': 'venus',
+    'tierra': 'earth',
+    'marte': 'mars',
+    'jupiter': 'jupiter',
+    'saturno': 'saturn',
+    'urano': 'uranus',
+    'neptuno': 'neptune'
+  };
+
+  const englishName = planetNames[planet.toLowerCase()] || planet;
+
   try {
-    const searchRes = await fetch(
-      `https://images-api.nasa.gov/search?q=${planet}+planet&media_type=video`
+    const res = await fetch(
+      `https://images-api.nasa.gov/search?q=${englishName}+planet&media_type=video`
     );
-    const searchData = await searchRes.json();
-    return searchData.collection?.items?.slice(0, 2) || [];
+    if (!res.ok) throw new Error('Network response was not ok');
+
+    const data = await res.json();
+    const items = data.collection?.items?.filter((item: any) => item.data?.[0]?.nasa_id).slice(0, 2) || [];
+
+    const videosWithMp4 = await Promise.all(
+      items.map(async (item: any) => {
+        try {
+          const nasa_id = item.data[0].nasa_id;
+          const mp4Url = await getVideoMp4Url(nasa_id);
+          return { ...item, mp4Url };
+        } catch (error) {
+          console.error(`Error processing video ${item.data[0].nasa_id}:`, error);
+          return { ...item, mp4Url: null };
+        }
+      })
+    );
+
+    return videosWithMp4.filter(video => video.data[0].title && (video.mp4Url || video.data[0].nasa_id));
   } catch (error) {
     console.error("Error fetching videos:", error);
     return [];
   }
 }
 
+async function getVideoMp4Url(nasa_id: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://images-api.nasa.gov/asset/${nasa_id}`);
+    const data = await res.json();
+    const mp4 = data.collection.items.find((item: any) =>
+      item.href.endsWith(".mp4")
+    );
+    return mp4 ? mp4.href : null;
+  } catch {
+    return null;
+  }
+}
+
 async function getImages(planet: string) {
+  const planetNames: Record<string, string> = {
+    'mercurio': 'mercury',
+    'venus': 'venus',
+    'tierra': 'earth',
+    'marte': 'mars',
+    'jupiter': 'jupiter',
+    'saturno': 'saturn',
+    'urano': 'uranus',
+    'neptuno': 'neptune'
+  };
+
+  const englishName = planetNames[planet.toLowerCase()] || planet;
+
   try {
     const res = await fetch(
-      `https://images-api.nasa.gov/search?q=${planet}+planet&media_type=image`
+      `https://images-api.nasa.gov/search?q=${englishName}+planet&media_type=image`
     );
+    if (!res.ok) throw new Error('Network response was not ok');
+
     const data = await res.json();
-    return data.collection?.items?.slice(0, 9) || [];
+    return data.collection?.items
+      ?.filter((item: any) => item.links?.[0]?.href && item.data?.[0]?.title)
+      .slice(0, 9) || [];
   } catch (error) {
     console.error("Error fetching images:", error);
     return [];
   }
 }
 
-export default async function PlanetDetail({ params }: { params: { name: string } }) {
-  const planet = planets.find(p => p.name.toLowerCase() === params.name.toLowerCase());
-  if (!planet) return <div className="p-10 text-red-500">Planet not found</div>;
+export default function PlanetDetail({ params }: { params: Promise<{ name?: string }> }) {
+  // Desenvuelve la promesa params
+  const resolvedParams = use(params);
+  const name = resolvedParams.name?.toLowerCase() || '';
 
-  const [videos, images] = await Promise.all([
-    getVideos(planet.name),
-    getImages(planet.name)
-  ]);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [images, setImages] = useState<any[]>([]);
+  const [translations, setTranslations] = useState<Record<string, { title: string, description: string }>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!name) {
+      setError("Nombre de planeta inválido");
+      setLoading(false);
+      return;
+    }
+
+    const planet = planets.find((p) => p.name.toLowerCase() === name);
+
+    if (!planet) {
+      setError("Planeta no encontrado");
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [videoData, imageData] = await Promise.all([
+          getVideos(planet.name),
+          getImages(planet.name)
+        ]);
+
+        setVideos(videoData);
+        setImages(imageData);
+
+        // Cargar traducciones guardadas
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('videoTranslations');
+          if (saved) setTranslations(JSON.parse(saved));
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Error al cargar los datos del planeta");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [name]);
+
+  const translateVideoContent = async (videoId: string, title: string, description: string) => {
+    if (translations[videoId]) {
+      // Si ya está traducido, eliminamos la traducción
+      const newTranslations = { ...translations };
+      delete newTranslations[videoId];
+      setTranslations(newTranslations);
+      localStorage.setItem('videoTranslations', JSON.stringify(newTranslations));
+      return;
+    }
+
+    // Marcamos como "traduciendo"
+    setTranslations(prev => ({
+      ...prev,
+      [videoId]: null as any
+    }));
+
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          explanation: description,
+          to: 'es'
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (!data.translations) {
+        throw new Error('Formato de respuesta inválido');
+      }
+
+      const newTranslations = {
+        ...translations,
+        [videoId]: {
+          title: data.translations.title || `📌 ${title} (Traducido)`,
+          description: data.translations.explanation || description
+        }
+      };
+
+      setTranslations(newTranslations);
+      localStorage.setItem('videoTranslations', JSON.stringify(newTranslations));
+    } catch (err) {
+      console.error('Error en traducción:', err);
+      // Fallback a traducción simulada
+      const newTranslations = {
+        ...translations,
+        [videoId]: {
+          title: `📌 ${title} (Traducido)`,
+          description: `[Error en traducción - Mostrando parcialmente] ${description.substring(0, 200)}...`
+        }
+      };
+      setTranslations(newTranslations);
+      localStorage.setItem('videoTranslations', JSON.stringify(newTranslations));
+    }
+  };
+
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center">
+        <FaSpinner className="animate-spin text-cyan-400 text-4xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center">
+        <div className="text-red-500 text-xl">{error}</div>
+      </div>
+    );
+  }
+
+  const planet = planets.find((p) => p.name.toLowerCase() === name);
+
+  if (!planet) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black flex items-center justify-center">
+        <div className="text-red-500 text-xl">Planeta no encontrado</div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
       {/* Hero Section */}
@@ -47,11 +242,12 @@ export default async function PlanetDetail({ params }: { params: { name: string 
         <div className="absolute inset-0 flex items-center justify-center opacity-20">
           <PlanetModel planetName={planet.name} />
         </div>
-        
+
         <div className="container mx-auto px-6 py-24 relative z-20">
           <div className="max-w-3xl">
             <span className="inline-block px-3 py-1 mb-4 text-xs font-medium rounded-full bg-cyan-900/30 text-cyan-400">
-              {planet.type} Planet
+              {planet.type === "Terrestre" ? "Planeta Terrestre" :
+                planet.type === "Gaseoso" ? "Gigante Gaseoso" : "Gigante Helado"}
             </span>
             <h1 className="text-5xl md:text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
               {planet.name}
@@ -68,51 +264,51 @@ export default async function PlanetDetail({ params }: { params: { name: string 
           <div>
             <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
               <MdExplore className="text-cyan-400" />
-              <span>Key Facts</span>
+              <span>Datos Clave</span>
             </h2>
-            
+
             <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50">
                 <div className="flex items-center gap-2 text-cyan-400 mb-2">
                   <FaSun />
-                  <h3 className="font-medium">Distance from Sun</h3>
+                  <h3 className="font-medium">Distancia al Sol</h3>
                 </div>
                 <p>{planet.distanceFromSun.km} ({planet.distanceFromSun.au})</p>
               </div>
-              
+
               <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50">
                 <div className="flex items-center gap-2 text-cyan-400 mb-2">
                   <FaWeight />
-                  <h3 className="font-medium">Gravity</h3>
+                  <h3 className="font-medium">Gravedad</h3>
                 </div>
                 <p>{planet.gravity}</p>
               </div>
-              
+
               <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50">
                 <div className="flex items-center gap-2 text-cyan-400 mb-2">
                   <FaTemperatureHigh />
-                  <h3 className="font-medium">Avg. Temperature</h3>
+                  <h3 className="font-medium">Temperatura Promedio</h3>
                 </div>
                 <p>{planet.avgTemperature}</p>
               </div>
-              
+
               <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50">
                 <div className="flex items-center gap-2 text-cyan-400 mb-2">
                   <GiOrbital />
-                  <h3 className="font-medium">Orbital Period</h3>
+                  <h3 className="font-medium">Periodo Orbital</h3>
                 </div>
                 <p>{planet.orbitalPeriod}</p>
               </div>
             </div>
 
             <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-3">Composition</h3>
+              <h3 className="text-xl font-semibold mb-3">Composición</h3>
               <p className="text-gray-300">{planet.composition}</p>
             </div>
 
             {planet.notableFeatures.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-xl font-semibold mb-3">Notable Features</h3>
+                <h3 className="text-xl font-semibold mb-3">Características Notables</h3>
                 <ul className="space-y-2">
                   {planet.notableFeatures.map((feature, i) => (
                     <li key={i} className="flex items-start">
@@ -121,6 +317,13 @@ export default async function PlanetDetail({ params }: { params: { name: string 
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {planet.discovery && (
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-3">Descubrimiento</h3>
+                <p className="text-gray-300">{planet.discovery}</p>
               </div>
             )}
           </div>
@@ -132,22 +335,82 @@ export default async function PlanetDetail({ params }: { params: { name: string 
               <div className="mb-12">
                 <h2 className="text-3xl font-bold mb-6">Videos</h2>
                 <div className="grid gap-4">
-                  {videos.map((video: any, i: number) => (
-                    <div key={i} className="bg-black rounded-xl overflow-hidden">
-                      <video
-                        src={video.links[0].href}
-                        controls
-                        className="w-full"
-                        poster={video.data[0]?.thumbnail_url}
-                      />
-                      <div className="p-4">
-                        <h3 className="font-medium">{video.data[0].title}</h3>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {video.data[0].description}
-                        </p>
+                  {videos.map((video: any, i: number) => {
+                    const videoId = video.data[0].nasa_id;
+                    const isTranslated = translations[videoId] && typeof translations[videoId] === 'object';
+                    const isTranslating = translations[videoId] === null;
+                    const title = isTranslated ? translations[videoId].title : video.data[0].title;
+                    const description = isTranslated ? translations[videoId].description : video.data[0].description;
+
+                    return (
+                      <div key={i} className="bg-black rounded-xl overflow-hidden border border-gray-700/50">
+                        {video.mp4Url ? (
+                          <video controls className="w-full aspect-video">
+                            <source src={video.mp4Url} type="video/mp4" />
+                            Tu navegador no soporta el video.
+                          </video>
+                        ) : (
+                          <a
+                            href={`https://images.nasa.gov/details-${videoId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full aspect-video bg-gray-900 flex items-center justify-center text-cyan-400"
+                          >
+                            Ver video en NASA
+                          </a>
+                        )}
+
+                        <div className="p-4">
+                          <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                            <h3 className="font-medium flex-1">
+                              {isTranslated && '📌 '}{title}
+                            </h3>
+                            <button
+                              onClick={() => translateVideoContent(
+                                videoId,
+                                video.data[0].title,
+                                video.data[0].description
+                              )}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm ${isTranslated
+                                ? 'bg-green-600 hover:bg-green-700'
+                                : 'bg-cyan-600 hover:bg-cyan-700'
+                                } transition-colors ${isTranslating ? 'opacity-80' : ''}`}
+                              disabled={isTranslating}
+                            >
+                              {isTranslating ? (
+                                <>
+                                  <FaSpinner className="animate-spin" />
+                                  <span>Traduciendo...</span>
+                                </>
+                              ) : isTranslated ? (
+                                <>
+                                  <FaLanguage />
+                                  <span>Mostrar original</span>
+                                </>
+                              ) : (
+                                <>
+                                  <FaLanguage />
+                                  <span>Traducir a español</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          <p className={`text-sm mt-2 whitespace-pre-line ${isTranslated ? 'text-gray-300 italic' : 'text-gray-400'
+                            }`}>
+                            {description}
+                          </p>
+
+                          {isTranslating && (
+                            <div className="mt-2 text-xs text-cyan-400 flex items-center">
+                              <FaSpinner className="animate-spin mr-2" />
+                              Traduciendo...
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -155,7 +418,7 @@ export default async function PlanetDetail({ params }: { params: { name: string 
             {/* Images */}
             {images.length > 0 && (
               <div>
-                <h2 className="text-3xl font-bold mb-6">Gallery</h2>
+                <h2 className="text-3xl font-bold mb-6">Galería</h2>
                 <div className="grid grid-cols-3 gap-2">
                   {images.map((img: any, i: number) => (
                     <a
@@ -167,7 +430,7 @@ export default async function PlanetDetail({ params }: { params: { name: string 
                     >
                       <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden relative">
                         <img
-                          src={img.links[0].href.replace('~thumb', '~large')}
+                          src={img.links[0].href.replace("~thumb", "~large")}
                           alt={img.data[0].title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"

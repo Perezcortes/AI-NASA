@@ -4,32 +4,17 @@ import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
-import { Mesh, SphereGeometry, MeshStandardMaterial } from 'three';
-
-// Tipos para los componentes de Three.js
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      mesh: any;
-      sphereGeometry: any;
-      meshStandardMaterial: any;
-      ambientLight: any;
-      pointLight: any;
-    }
-  }
-}
 
 const Planet = ({ name }: { name: string }) => {
-  // Configuraciones de planetas
-  const planetConfigs: Record<string, { size: number; color: string; texture?: string }> = {
-    mercury: { size: 0.4, color: '#A9A9A9' },
-    venus: { size: 0.6, color: '#E6C229' },
-    earth: { size: 0.6, color: '#3498db' },
-    mars: { size: 0.5, color: '#e74c3c' },
-    jupiter: { size: 1.2, color: '#f39c12' },
-    saturn: { size: 1.0, color: '#f1c40f' },
-    uranus: { size: 0.8, color: '#1abc9c' },
-    neptune: { size: 0.8, color: '#3498db' }
+  const planetConfigs: Record<string, { size: number; color: string }> = {
+    'mercurio': { size: 0.4, color: '#A9A9A9' },
+    'venus': { size: 0.6, color: '#E6C229' },
+    'tierra': { size: 0.6, color: '#3498db' },
+    'marte': { size: 0.5, color: '#e74c3c' },
+    'jupiter': { size: 1.2, color: '#f39c12' },
+    'saturno': { size: 1.0, color: '#f1c40f' },
+    'urano': { size: 0.8, color: '#1abc9c' },
+    'neptuno': { size: 0.8, color: '#3498db' }
   };
 
   const config = planetConfigs[name.toLowerCase()] || { size: 1, color: '#FFFFFF' };
@@ -42,6 +27,17 @@ const Planet = ({ name }: { name: string }) => {
         roughness={0.8}
         metalness={0.2}
       />
+      {name.toLowerCase() === 'saturno' && (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[config.size * 1.5, config.size * 1.7, 32]} />
+          <meshStandardMaterial 
+            color={new THREE.Color(0xdddddd)}
+            roughness={0.5}
+            metalness={0.1}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
     </mesh>
   );
 };

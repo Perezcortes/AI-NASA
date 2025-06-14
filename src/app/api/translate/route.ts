@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge'; // Usa Edge Runtime para mejor performance
+export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
     const { title, explanation, to } = await req.json();
 
-    // Validación mejorada
+    // Validación básica
     if (!title || !explanation || !to) {
       return NextResponse.json(
         { error: 'Se requieren título, explicación y lenguaje destino' }, 
@@ -15,23 +15,26 @@ export async function POST(req: Request) {
     }
 
     // Limitar longitud para evitar costos altos
-    if (explanation.length > 2000) {
-      return NextResponse.json(
-        { error: 'La explicación es demasiado larga (máximo 2000 caracteres)' },
-        { status: 400 }
-      );
-    }
+    const MAX_LENGTH = 5000;
+    const truncatedExplanation = explanation.length > MAX_LENGTH 
+      ? explanation.substring(0, MAX_LENGTH) + "... [texto truncado]"
+      : explanation;
 
-    // Prompt optimizado para Gemini
-    const prompt = `Como experto traductor científico, traduce al ${to} manteniendo el significado preciso:
+    // Prompt optimizado para contenido astronómico
+    const prompt = `Como experto traductor científico de la NASA, traduce al ${to} manteniendo el significado preciso y terminología técnica:
     
     Título: "${title}"
-    Explicación: "${explanation}"
+    Descripción: "${truncatedExplanation}"
 
-    Devuelve SOLO un JSON válido sin comentarios ni texto adicional:
+    Instrucciones:
+    1. Conserva nombres propios y términos técnicos en inglés
+    2. Mantén el tono científico pero accesible
+    3. No añadas comentarios ni texto adicional
+
+    Devuelve SOLO un JSON válido:
     {
       "title": "[traducción del título]",
-      "explanation": "[traducción de la explicación]"
+      "explanation": "[traducción de la descripción]"
     }`;
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -40,7 +43,7 @@ export async function POST(req: Request) {
     }
 
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,7 +68,7 @@ export async function POST(req: Request) {
       throw new Error('Respuesta vacía de Gemini');
     }
 
-    // Extracción más robusta del JSON
+    // Extracción robusta del JSON
     try {
       const jsonStart = responseText.indexOf('{');
       const jsonEnd = responseText.lastIndexOf('}') + 1;

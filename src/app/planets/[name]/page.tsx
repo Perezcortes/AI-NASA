@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { use } from 'react';
-import { FaTemperatureHigh, FaWeight, FaMoon, FaSun, FaLanguage, FaSpinner } from "react-icons/fa";
+import { FaTemperatureHigh, FaWeight, FaMoon, FaSun, FaLanguage, FaSpinner, FaVolumeUp, FaStop } from "react-icons/fa";
 import { GiOrbital } from "react-icons/gi";
 import { MdExplore } from "react-icons/md";
 import PlanetModel from "../../../components/PlanetModel";
 import { planets } from "../../data/planets";
+import VoiceAssistant from '../../../components/VoiceAssistant';
 
 async function getVideos(planet: string) {
   const planetNames: Record<string, string> = {
@@ -94,14 +95,120 @@ async function getImages(planet: string) {
   }
 }
 
+function LocalVoiceAssistant({ planetData }: { planetData: any }) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSupported, setIsSupported] = useState(true);
+  const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
+
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) {
+      setIsSupported(false);
+      return;
+    }
+
+    setSpeechSynthesis(window.speechSynthesis);
+
+    return () => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const generateSpeechText = () => {
+    let speechText = `Información sobre ${planetData.name}. `;
+    speechText += `${planetData.description} `;
+    
+    speechText += `Datos clave: `;
+    speechText += `Distancia al Sol: ${planetData.distanceFromSun.km} (${planetData.distanceFromSun.au}). `;
+    speechText += `Gravedad: ${planetData.gravity}. `;
+    speechText += `Temperatura promedio: ${planetData.avgTemperature}. `;
+    speechText += `Periodo orbital: ${planetData.orbitalPeriod}. `;
+    
+    speechText += `Composición: ${planetData.composition}. `;
+    
+    if (planetData.notableFeatures.length > 0) {
+      speechText += `Características notables: `;
+      planetData.notableFeatures.forEach((feature: string) => {
+        speechText += `${feature}. `;
+      });
+    }
+    
+    if (planetData.discovery) {
+      speechText += `Descubrimiento: ${planetData.discovery}. `;
+    }
+
+    return speechText;
+  };
+
+  const speak = () => {
+    if (!speechSynthesis || !isSupported) return;
+
+    if (isSpeaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const speechText = generateSpeechText();
+    const utterance = new SpeechSynthesisUtterance(speechText);
+
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.lang = 'es-ES';
+
+    const voices = speechSynthesis.getVoices();
+    const spanishVoice = voices.find(voice => voice.lang.includes('es'));
+    if (spanishVoice) {
+      utterance.voice = spanishVoice;
+    }
+
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
+
+  if (!isSupported) {
+    return null;
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      <button
+        onClick={speak}
+        className={`p-4 rounded-full shadow-lg transition-all flex items-center gap-2 ${
+          isSpeaking 
+            ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+            : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+        }`}
+        aria-label={isSpeaking ? 'Detener narración' : 'Escuchar información del planeta'}
+      >
+        {isSpeaking ? (
+          <>
+            <FaStop className="text-xl" />
+            <span className="hidden sm:inline">Detener</span>
+          </>
+        ) : (
+          <>
+            <FaVolumeUp className="text-xl" />
+            <span className="hidden sm:inline">Escuchar</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
 export default function PlanetDetail({ params }: { params: Promise<{ name?: string }> }) {
-  // Desenvuelve la promesa params
   const resolvedParams = use(params);
   const name = resolvedParams.name?.toLowerCase() || '';
-
+  
   const [videos, setVideos] = useState<any[]>([]);
   const [images, setImages] = useState<any[]>([]);
-  const [translations, setTranslations] = useState<Record<string, { title: string, description: string }>>({});
+  const [translations, setTranslations] = useState<Record<string, {title: string, description: string}>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,11 +233,10 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
           getVideos(planet.name),
           getImages(planet.name)
         ]);
-
+        
         setVideos(videoData);
         setImages(imageData);
-
-        // Cargar traducciones guardadas
+        
         if (typeof window !== 'undefined') {
           const saved = localStorage.getItem('videoTranslations');
           if (saved) setTranslations(JSON.parse(saved));
@@ -148,15 +254,13 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
 
   const translateVideoContent = async (videoId: string, title: string, description: string) => {
     if (translations[videoId]) {
-      // Si ya está traducido, eliminamos la traducción
-      const newTranslations = { ...translations };
+      const newTranslations = {...translations};
       delete newTranslations[videoId];
       setTranslations(newTranslations);
       localStorage.setItem('videoTranslations', JSON.stringify(newTranslations));
       return;
     }
 
-    // Marcamos como "traduciendo"
     setTranslations(prev => ({
       ...prev,
       [videoId]: null as any
@@ -166,22 +270,17 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          explanation: description,
-          to: 'es'
+        body: JSON.stringify({ 
+          title, 
+          explanation: description, 
+          to: 'es' 
         }),
       });
-
+      
       const data = await res.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      if (!data.translations) {
-        throw new Error('Formato de respuesta inválido');
-      }
+      
+      if (data.error) throw new Error(data.error);
+      if (!data.translations) throw new Error('Formato de respuesta inválido');
 
       const newTranslations = {
         ...translations,
@@ -195,7 +294,6 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
       localStorage.setItem('videoTranslations', JSON.stringify(newTranslations));
     } catch (err) {
       console.error('Error en traducción:', err);
-      // Fallback a traducción simulada
       const newTranslations = {
         ...translations,
         [videoId]: {
@@ -207,7 +305,6 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
       localStorage.setItem('videoTranslations', JSON.stringify(newTranslations));
     }
   };
-
 
   if (loading) {
     return (
@@ -234,6 +331,20 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
       </div>
     );
   }
+
+  const planetData = {
+    name: planet.name,
+    description: planet.description,
+    distanceFromSun: planet.distanceFromSun,
+    gravity: planet.gravity,
+    avgTemperature: planet.avgTemperature,
+    orbitalPeriod: planet.orbitalPeriod,
+    composition: planet.composition,
+    notableFeatures: planet.notableFeatures,
+    discovery: planet.discovery,
+    type: planet.type
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
       {/* Hero Section */}
@@ -359,7 +470,7 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
                             Ver video en NASA
                           </a>
                         )}
-
+                        
                         <div className="p-4">
                           <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                             <h3 className="font-medium flex-1">
@@ -449,6 +560,9 @@ export default function PlanetDetail({ params }: { params: Promise<{ name?: stri
           </div>
         </div>
       </div>
+
+      {/* Voice Assistant */}
+            <LocalVoiceAssistant planetData={planetData} />
     </div>
   );
 }

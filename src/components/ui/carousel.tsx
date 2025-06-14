@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FaChevronLeft, FaChevronRight, FaLanguage, FaSpinner } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ApodResponse } from "../../app/types/nasa";
+import { useSpeechCommands } from '../../hooks/useSpeechCommands';
+
+const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
 
 export const Carousel = ({ images }: { images: ApodResponse[] }) => {
     const [index, setIndex] = useState(0);
@@ -13,10 +16,13 @@ export const Carousel = ({ images }: { images: ApodResponse[] }) => {
     const [direction, setDirection] = useState(0);
     const [imageLoaded, setImageLoaded] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [speaking, setSpeaking] = useState(false);
+    const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
     const current = images[index];
 
     const navigate = (dir: number) => {
+        stopSpeaking();
         setDirection(dir);
         setImageLoaded(false);
         setTranslatedTitle(null);
@@ -34,24 +40,24 @@ export const Carousel = ({ images }: { images: ApodResponse[] }) => {
 
         setTranslating(true);
         setError(null);
-        
+
         try {
             const res = await fetch('/api/translate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    title: current.title, 
-                    explanation: current.explanation, 
-                    to: 'es' 
+                body: JSON.stringify({
+                    title: current.title,
+                    explanation: current.explanation,
+                    to: 'es'
                 }),
             });
-            
+
             const data = await res.json();
-            
+
             if (data.error) {
                 throw new Error(data.error);
             }
-            
+
             if (!data.translations) {
                 throw new Error('Formato de respuesta inválido');
             }
@@ -61,13 +67,42 @@ export const Carousel = ({ images }: { images: ApodResponse[] }) => {
         } catch (err) {
             console.error('Error en traducción:', err);
             setError(err instanceof Error ? err.message : 'Error al traducir');
-            // Fallback a traducción simulada si la API falla
             setTranslatedTitle(`📌 ${current.title} (Traducido)`);
             setTranslatedExplanation(`[Traducción simulada] ${current.explanation.substring(0, 150)}...`);
         } finally {
             setTranslating(false);
         }
     };
+
+    const speakContent = () => {
+        if (!synth) return;
+
+        const utterance = new SpeechSynthesisUtterance();
+        utteranceRef.current = utterance;
+
+        utterance.text = `${translatedTitle || current.title}. ${translatedExplanation || current.explanation}`;
+        utterance.lang = translatedExplanation ? "es-ES" : "en-US";
+        utterance.rate = 1;
+        utterance.pitch = 1;
+
+        utterance.onstart = () => setSpeaking(true);
+        utterance.onend = () => setSpeaking(false);
+        utterance.onerror = () => setSpeaking(false);
+
+        synth.cancel();
+        synth.speak(utterance);
+    };
+
+    const stopSpeaking = () => {
+        synth?.cancel();
+        setSpeaking(false);
+    };
+
+    useSpeechCommands({
+        'léelo': speakContent,
+        'detén lectura': stopSpeaking,
+    });
+
 
     useEffect(() => {
         const timer = setTimeout(() => setImageLoaded(true), 300);
@@ -127,7 +162,7 @@ export const Carousel = ({ images }: { images: ApodResponse[] }) => {
             </div>
 
             {/* Panel de contenido */}
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
@@ -142,7 +177,7 @@ export const Carousel = ({ images }: { images: ApodResponse[] }) => {
                     </span>
                 </div>
 
-                <motion.p 
+                <motion.p
                     className="text-gray-300 leading-relaxed whitespace-pre-line mb-6"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -158,27 +193,36 @@ export const Carousel = ({ images }: { images: ApodResponse[] }) => {
                 )}
 
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                    <button
-                        onClick={translateContent}
-                        disabled={translating}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-                            translatedExplanation 
-                                ? 'bg-green-600 hover:bg-green-700' 
-                                : 'bg-cyan-600 hover:bg-cyan-700'
-                        } ${translating ? 'opacity-80' : ''}`}
-                        aria-label={translatedExplanation ? 'Mostrar texto original' : 'Traducir a español'}
-                    >
-                        {translating ? (
-                            <FaSpinner className="animate-spin" />
+                    <div className="flex gap-2 flex-wrap">
+                        <button
+                            onClick={translateContent}
+                            disabled={translating}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${translatedExplanation
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-cyan-600 hover:bg-cyan-700'
+                                } ${translating ? 'opacity-80' : ''}`}
+                            aria-label={translatedExplanation ? 'Mostrar texto original' : 'Traducir a español'}
+                        >
+                            {translating ? <FaSpinner className="animate-spin" /> : <FaLanguage />}
+                            {translating ? 'Traduciendo...' : translatedExplanation ? 'Mostrar original' : 'Traducir a español'}
+                        </button>
+
+                        {!speaking ? (
+                            <button
+                                onClick={speakContent}
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-600 hover:bg-purple-700 transition-all"
+                            >
+                                🎧 Leer información
+                            </button>
                         ) : (
-                            <FaLanguage />
+                            <button
+                                onClick={stopSpeaking}
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-600 hover:bg-red-700 transition-all"
+                            >
+                                🔇 Detener lectura
+                            </button>
                         )}
-                        {translating 
-                            ? 'Traduciendo...' 
-                            : translatedExplanation 
-                                ? 'Mostrar original' 
-                                : 'Traducir a español'}
-                    </button>
+                    </div>
 
                     {current.copyright && (
                         <div className="text-sm text-gray-400">

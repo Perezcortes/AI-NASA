@@ -7,22 +7,26 @@ import { Carousel } from '../components/ui/carousel';
 import { FaSearch, FaMicrophone, FaRobot, FaRocket, FaMeteor, FaNewspaper } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApodResponse } from './types/nasa';
+import Link from "next/link";
 
 const FEATURES = [
   {
     icon: <FaRocket className="text-4xl text-cyan-400" />,
     title: "Exploración Planetaria",
-    description: "Descubre información detallada sobre todos los planetas de nuestro sistema solar"
+    description: "Descubre información detallada sobre todos los planetas de nuestro sistema solar",
+    href: "/planets"
   },
   {
     icon: <FaMeteor className="text-4xl text-purple-400" />,
     title: "Asteroides Cercanos",
-    description: "Monitorea los asteroides que se acercan a la Tierra en tiempo real"
+    description: "Monitorea los asteroides que se acercan a la Tierra en tiempo real",
+    href: "/asteroids"
   },
   {
     icon: <FaNewspaper className="text-4xl text-yellow-400" />,
     title: "Últimas Noticias",
-    description: "Mantente al día con los descubrimientos más recientes de la NASA"
+    description: "Mantente al día con los descubrimientos más recientes de la NASA",
+    href: "/news"
   }
 ];
 
@@ -164,7 +168,7 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
               Explora el Cosmos
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {FEATURES.map((feature, index) => (
                 <motion.div
@@ -179,9 +183,11 @@ export default function HomePage() {
                     <div className="mb-4">{feature.icon}</div>
                     <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
                     <p className="text-gray-300">{feature.description}</p>
-                    <button className="mt-4 px-4 py-2 text-sm rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all">
-                      Explorar
-                    </button>
+                    <Link href={feature.href}>
+                      <button className="mt-4 px-4 py-2 text-sm rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all">
+                        Explorar
+                      </button>
+                    </Link>
                   </div>
                 </motion.div>
               ))}
@@ -195,10 +201,10 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
               Imágenes del Día
             </h2>
-            
+
             {loading && <Loader message="Cargando imágenes del cosmos..." />}
             {error && <ErrorMessage message={error} onRetry={() => location.reload()} />}
-            
+
             {!loading && data.length > 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -220,7 +226,7 @@ export default function HomePage() {
             <p className="text-xl text-gray-300 mb-8">
               Pregúntale a nuestro asistente inteligente sobre cualquier tema relacionado con el espacio
             </p>
-            
+
             <div className="flex flex-wrap justify-center gap-4 mb-12">
               <button className="flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-all">
                 <FaRobot className="mr-2" />
@@ -235,7 +241,7 @@ export default function HomePage() {
                 <span>Últimos descubrimientos</span>
               </button>
             </div>
-            
+
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 max-w-2xl mx-auto">
               <div className="flex items-center space-x-4">
                 <div className="bg-cyan-500/20 p-3 rounded-full">

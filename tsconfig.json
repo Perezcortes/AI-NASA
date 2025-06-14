@@ -13,13 +13,14 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "types": ["three", "@react-three/fiber", "@react-three/drei"],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "app/*": ["./src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -1,57 +1,193 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { FaChevronLeft, FaChevronRight, FaLanguage, FaSpinner } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 import type { ApodResponse } from "../../app/types/nasa";
 
 export const Carousel = ({ images }: { images: ApodResponse[] }) => {
-  const [index, setIndex] = useState(0);
+    const [index, setIndex] = useState(0);
+    const [translatedTitle, setTranslatedTitle] = useState<string | null>(null);
+    const [translatedExplanation, setTranslatedExplanation] = useState<string | null>(null);
+    const [translating, setTranslating] = useState(false);
+    const [direction, setDirection] = useState(0);
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  const prev = () => setIndex((i) => (i - 1 + images.length) % images.length);
-  const next = () => setIndex((i) => (i + 1) % images.length);
+    const current = images[index];
 
-  const current = images[index];
+    const navigate = (dir: number) => {
+        setDirection(dir);
+        setImageLoaded(false);
+        setTranslatedTitle(null);
+        setTranslatedExplanation(null);
+        setError(null);
+        setIndex((i) => (i + dir + images.length) % images.length);
+    };
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="relative group">
-        <img
-          src={current.url}
-          alt={current.title}
-          className="w-full h-auto max-h-[80vh] object-contain rounded-xl shadow-2xl transition-all group-hover:shadow-cyan-500/50"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 flex justify-between items-center px-4">
-          <button
-            onClick={prev}
-            className="bg-black/50 hover:bg-black/70 p-2 rounded-full text-white"
-          >
-            ◀
-          </button>
-          <button
-            onClick={next}
-            className="bg-black/50 hover:bg-black/70 p-2 rounded-full text-white"
-          >
-            ▶
-          </button>
+    const translateContent = async () => {
+        if (translatedExplanation) {
+            setTranslatedTitle(null);
+            setTranslatedExplanation(null);
+            return;
+        }
+
+        setTranslating(true);
+        setError(null);
+        
+        try {
+            const res = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    title: current.title, 
+                    explanation: current.explanation, 
+                    to: 'es' 
+                }),
+            });
+            
+            const data = await res.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            if (!data.translations) {
+                throw new Error('Formato de respuesta inválido');
+            }
+
+            setTranslatedTitle(data.translations.title || `📌 ${current.title} (Traducido)`);
+            setTranslatedExplanation(data.translations.explanation);
+        } catch (err) {
+            console.error('Error en traducción:', err);
+            setError(err instanceof Error ? err.message : 'Error al traducir');
+            // Fallback a traducción simulada si la API falla
+            setTranslatedTitle(`📌 ${current.title} (Traducido)`);
+            setTranslatedExplanation(`[Traducción simulada] ${current.explanation.substring(0, 150)}...`);
+        } finally {
+            setTranslating(false);
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => setImageLoaded(true), 300);
+        return () => clearTimeout(timer);
+    }, [index]);
+
+    return (
+        <div className="space-y-8">
+            {/* Contenedor de imagen */}
+            <div className="relative h-[70vh] max-h-[800px] rounded-2xl overflow-hidden bg-gray-800/50">
+                <AnimatePresence custom={direction}>
+                    <motion.div
+                        key={index}
+                        custom={direction}
+                        initial={{ opacity: 0, x: direction > 0 ? 100 : -100 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: direction > 0 ? -100 : 100 }}
+                        transition={{ duration: 0.5 }}
+                        className="absolute inset-0"
+                    >
+                        {!imageLoaded && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-800/30">
+                                <FaSpinner className="animate-spin text-cyan-400 text-4xl" />
+                            </div>
+                        )}
+                        <img
+                            src={current.url}
+                            alt={current.title}
+                            className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            loading="lazy"
+                            onLoad={() => setImageLoaded(true)}
+                            onError={() => setImageLoaded(true)}
+                        />
+                    </motion.div>
+                </AnimatePresence>
+
+                {/* Controles de navegación */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 p-4 rounded-full text-white shadow-lg transition-all group"
+                    aria-label="Imagen anterior"
+                >
+                    <FaChevronLeft className="group-hover:-translate-x-1 transition-transform" />
+                </button>
+                <button
+                    onClick={() => navigate(1)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 p-4 rounded-full text-white shadow-lg transition-all group"
+                    aria-label="Siguiente imagen"
+                >
+                    <FaChevronRight className="group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                {/* Indicador de imagen */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1 rounded-full text-sm text-white">
+                    {index + 1} / {images.length}
+                </div>
+            </div>
+
+            {/* Panel de contenido */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-gray-800/40 backdrop-blur-sm p-6 rounded-xl border border-gray-700/50"
+            >
+                <div className="flex justify-between items-start mb-4 flex-wrap gap-2">
+                    <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                        {translatedTitle || current.title}
+                    </h2>
+                    <span className="text-sm text-gray-400 min-w-max">
+                        {current.date}
+                    </span>
+                </div>
+
+                <motion.p 
+                    className="text-gray-300 leading-relaxed whitespace-pre-line mb-6"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                >
+                    {translatedExplanation || current.explanation}
+                </motion.p>
+
+                {error && (
+                    <div className="mb-4 p-3 bg-red-900/30 rounded-lg text-red-300 text-sm">
+                        Error en traducción: {error}
+                    </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <button
+                        onClick={translateContent}
+                        disabled={translating}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+                            translatedExplanation 
+                                ? 'bg-green-600 hover:bg-green-700' 
+                                : 'bg-cyan-600 hover:bg-cyan-700'
+                        } ${translating ? 'opacity-80' : ''}`}
+                        aria-label={translatedExplanation ? 'Mostrar texto original' : 'Traducir a español'}
+                    >
+                        {translating ? (
+                            <FaSpinner className="animate-spin" />
+                        ) : (
+                            <FaLanguage />
+                        )}
+                        {translating 
+                            ? 'Traduciendo...' 
+                            : translatedExplanation 
+                                ? 'Mostrar original' 
+                                : 'Traducir a español'}
+                    </button>
+
+                    {current.copyright && (
+                        <div className="text-sm text-gray-400">
+                            <span className="text-gray-500">Créditos: </span>
+                            <span className="text-cyan-300">{current.copyright}</span>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
         </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex justify-between items-start">
-          <h2 className="text-2xl font-bold text-cyan-100">{current.title}</h2>
-          <span className="text-sm text-gray-400">{current.date}</span>
-        </div>
-
-        <p className="text-gray-300 leading-relaxed whitespace-pre-line">
-          {current.explanation}
-        </p>
-
-        {current.copyright && (
-          <p className="text-sm text-gray-500">
-            Créditos: {current.copyright}
-          </p>
-        )}
-      </div>
-    </div>
-  );
+    );
 };

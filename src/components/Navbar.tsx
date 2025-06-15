@@ -5,7 +5,7 @@ import { MobileMenu } from "./ui/mobile-menu";
 const navLinks = [
   { name: "Inicio", path: "/" },
   { name: "Planetas", path: "/planets" },
-  { name: "Asteroides", path: "/asteroides" },
+  { name: "Asteroides", path: "/asteroids" },
   { name: "IA Interactiva", path: "/ia" },
 ];
 

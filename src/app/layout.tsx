@@ -3,7 +3,7 @@ import { Footer } from "../components/Footer";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/providers/ThemeProvider"; // wrapper
+import { RootProvider } from "./RootProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,11 +20,11 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} bg-white text-black dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col`}>
-        <ThemeProvider>
+        <RootProvider>
           <Navbar />
           <main className="flex-grow">{children}</main>
           <Footer />
-        </ThemeProvider>
+        </RootProvider>
       </body>
     </html>
   );

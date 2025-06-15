@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import NoticiasGrid from '@/components/noticias/NoticiasGrid';
 import NoticiasHeader from '@/components/noticias/NoticiasHeader';
+import ReadLaterModal from '@/components/noticias/ReadLaterModal';
+import type { RootState } from '@/store';
 
 type Noticia = {
   title: string;
@@ -15,13 +18,19 @@ export default function NoticiasPage() {
   const [noticias, setNoticias] = useState<Noticia[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState(''); // <-- Estado para búsqueda
+  const [searchTerm, setSearchTerm] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Obtener cantidad de noticias "leer más tarde" desde Redux
+  const readLaterCount = useSelector((state: RootState) => state.readLater.items.length);
 
   useEffect(() => {
     const fetchNoticias = async () => {
       try {
         setLoading(true);
-        const res = await fetch('https://images-api.nasa.gov/search?q=news&media_type=image&year_start=2025');
+        const res = await fetch(
+          'https://images-api.nasa.gov/search?q=news&media_type=image&year_start=2025'
+        );
 
         if (!res.ok) {
           throw new Error('Error al cargar noticias');
@@ -49,7 +58,6 @@ export default function NoticiasPage() {
     fetchNoticias();
   }, []);
 
-  // Filtrar noticias según searchTerm (insensible a mayúsculas)
   const filteredNoticias = noticias.filter(
     (noticia) =>
       noticia.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,7 +67,17 @@ export default function NoticiasPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Pasar la función que actualiza searchTerm */}
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-bold text-white">Noticias</h1>
+
+          <button
+            onClick={() => setModalOpen(true)}
+            className="bg-cyan-600 hover:bg-cyan-700 px-4 py-2 rounded text-white"
+          >
+            Leer más tarde ({readLaterCount})
+          </button>
+        </div>
+
         <NoticiasHeader onSearch={setSearchTerm} />
 
         {error && (
@@ -74,8 +92,9 @@ export default function NoticiasPage() {
           </div>
         )}
 
-        {/* Mostrar las noticias filtradas */}
         <NoticiasGrid noticias={filteredNoticias} loading={loading} />
+
+        <ReadLaterModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
       </div>
     </main>
   );

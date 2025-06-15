@@ -36,6 +36,9 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [stars, setStars] = useState<
+    { width: number; height: number; top: number; left: number; opacity: number; delay: number }[]
+  >([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const API_KEY = process.env.NASA_API_KEY || 'DEMO_KEY';
@@ -70,8 +73,21 @@ export default function HomePage() {
     fetchApodImages();
   }, []);
 
+  useEffect(() => {
+    const generateStars = () => {
+      return [...Array(100)].map(() => ({
+        width: Math.random() * 3 + 1,
+        height: Math.random() * 3 + 1,
+        top: Math.random() * 100,
+        left: Math.random() * 100,
+        opacity: Math.random() * 0.7 + 0.1,
+        delay: Math.random() * 10,
+      }));
+    };
+    setStars(generateStars());
+  }, []);
+
   const handleVoiceSearch = () => {
-    // Esto será implementado luego
     setIsListening(true);
     setTimeout(() => {
       setSearchQuery('Lluvia de estrellas en la Tierra');
@@ -82,18 +98,18 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black overflow-hidden">
       {/* Efecto de estrellas en el fondo */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(100)].map((_, i) => (
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        {stars.map((star, i) => (
           <div
             key={i}
             className="absolute rounded-full bg-white animate-twinkle"
             style={{
-              width: `${Math.random() * 3 + 1}px`,
-              height: `${Math.random() * 3 + 1}px`,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              opacity: Math.random() * 0.7 + 0.1,
-              animationDelay: `${Math.random() * 10}s`,
+              width: `${star.width}px`,
+              height: `${star.height}px`,
+              top: `${star.top}%`,
+              left: `${star.left}%`,
+              opacity: star.opacity,
+              animationDelay: `${star.delay}s`,
             }}
           />
         ))}

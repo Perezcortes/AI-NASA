@@ -1,18 +1,15 @@
-/// <reference path="../app/types/speech.d.ts" />
-
-import { useEffect } from "react";
-
-type CommandCallback = () => void;
+import { useRef, useCallback } from "react";
 
 type Commands = {
-  [command: string]: CommandCallback;
+  [command: string]: () => void;
 };
 
 export const useSpeechCommands = (commands: Commands) => {
-  useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isListeningRef = useRef(false);
 
+  const initRecognition = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn("Web Speech API no disponible");
       return;
@@ -38,17 +35,30 @@ export const useSpeechCommands = (commands: Commands) => {
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Error de reconocimiento de voz:", event);
+      if (event.error === "not-allowed") {
+        recognition.stop();
+      }
     };
 
     recognition.onend = () => {
-      recognition.start(); // reinicia reconocimiento al finalizar para mantenerlo activo
+      if (isListeningRef.current) {
+        recognition.start(); // solo si seguimos escuchando
+      }
     };
 
-    recognition.start();
-
-    return () => {
-      recognition.stop();
-      recognition.abort();
-    };
+    recognitionRef.current = recognition;
   }, [commands]);
+
+  const startListening = () => {
+    if (!recognitionRef.current) initRecognition();
+    isListeningRef.current = true;
+    recognitionRef.current?.start();
+  };
+
+  const stopListening = () => {
+    isListeningRef.current = false;
+    recognitionRef.current?.stop();
+  };
+
+  return { startListening, stopListening };
 };

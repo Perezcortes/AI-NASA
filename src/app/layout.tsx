@@ -3,6 +3,9 @@ import { Footer } from "../components/Footer";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
+import { ThemeProvider } from "@/providers/ThemeProvider"; // wrapper
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "AI-NASA | Explorando el universo",
@@ -15,11 +18,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
-      <body className="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+    <html lang="es" suppressHydrationWarning>
+      <body className={`${inter.className} bg-white text-black dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col`}>
+        <ThemeProvider>
+          <Navbar />
+          <main className="flex-grow">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

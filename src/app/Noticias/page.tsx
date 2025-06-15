@@ -1,36 +1,82 @@
-"use client";
+'use client';
+
+import { useEffect, useState } from 'react';
+import NoticiasGrid from '@/components/noticias/NoticiasGrid';
+import NoticiasHeader from '@/components/noticias/NoticiasHeader';
+
+type Noticia = {
+  title: string;
+  description: string;
+  imageUrl: string;
+  nasaLink: string;
+};
 
 export default function NoticiasPage() {
+  const [noticias, setNoticias] = useState<Noticia[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState(''); // <-- Estado para búsqueda
+
+  useEffect(() => {
+    const fetchNoticias = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch('https://images-api.nasa.gov/search?q=news&media_type=image&year_start=2025');
+
+        if (!res.ok) {
+          throw new Error('Error al cargar noticias');
+        }
+
+        const data = await res.json();
+        const results = data.collection.items
+          .filter((item: any) => item.data?.[0]?.title && item.links?.[0]?.href)
+          .slice(0, 12)
+          .map((item: any) => ({
+            title: item.data[0].title,
+            description: item.data[0].description || 'Descripción no disponible',
+            imageUrl: item.links[0].href,
+            nasaLink: `https://www.nasa.gov${item.href}` || '#',
+          }));
+
+        setNoticias(results);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNoticias();
+  }, []);
+
+  // Filtrar noticias según searchTerm (insensible a mayúsculas)
+  const filteredNoticias = noticias.filter(
+    (noticia) =>
+      noticia.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      noticia.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white p-6">
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">📰 Noticias del Espacio</h1>
-        <button className="bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-700">Volver</button>
-      </header>
+    <main className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Pasar la función que actualiza searchTerm */}
+        <NoticiasHeader onSearch={setSearchTerm} />
 
-      <section className="space-y-6">
-        <article className="bg-gray-800 p-5 rounded-lg shadow-lg">
-          <h2 className="text-xl font-semibold">📡 Señal detectada desde exoplaneta</h2>
-          <p className="text-sm text-gray-400">13 de junio de 2025</p>
-          <p>
-            La NASA informó sobre una señal de origen desconocido proveniente de un exoplaneta ubicado a 400 años luz. Se están realizando análisis para determinar su origen.
-          </p>
-        </article>
+        {error && (
+          <div className="bg-red-900/30 border border-red-700 rounded-lg p-6 text-center mb-8">
+            <p className="text-red-300 text-lg">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 px-4 py-2 bg-red-700 hover:bg-red-600 rounded-md text-sm"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
 
-        <article className="bg-gray-800 p-5 rounded-lg shadow-lg">
-          <h2 className="text-xl font-semibold">🌍 Asteroide pasará cerca de la Tierra</h2>
-          <p className="text-sm text-gray-400">11 de junio de 2025</p>
-          <p>
-            Un asteroide de gran tamaño se aproximará a la Tierra a una distancia segura, según los cálculos del centro de estudios planetarios.
-          </p>
-        </article>
-      </section>
-
-      <div className="text-center mt-10">
-        <button className="bg-blue-600 px-6 py-3 rounded-full hover:bg-blue-500 text-lg">
-          🎤 Leer noticias en voz alta
-        </button>
+        {/* Mostrar las noticias filtradas */}
+        <NoticiasGrid noticias={filteredNoticias} loading={loading} />
       </div>
-    </div>
+    </main>
   );
 }

@@ -6,7 +6,7 @@ const navLinks = [
   { name: "Inicio", path: "/" },
   { name: "Planetas", path: "/planets" },
   { name: "Asteroides", path: "/asteroids" },
-  { name: "IA Interactiva", path: "/ia" },
+  { name: "Noticias-NASA", path: "/noticias" },
 ];
 
 export function Navbar() {

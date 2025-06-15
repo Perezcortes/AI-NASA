@@ -69,7 +69,7 @@ export function Footer() {
         
         <div className="border-t border-gray-800 mt-8 pt-6 text-center text-gray-500 text-sm">
           <p>
-            © {new Date().getFullYear()} AI-NASA. Desarrollado con <span className="text-red-500">❤</span> por José Pérez
+            © {new Date().getFullYear()} AI-NASA. Desarrollado por <span className="text-red-500"></span> Yamil Morales y José Pérez
           </p>
           <p className="mt-2">
             Este proyecto no está afiliado a la NASA. Todos los datos son proporcionados por la{' '}

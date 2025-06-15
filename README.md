@@ -70,6 +70,8 @@ Este proyecto es una plataforma web interactiva que permite explorar el universo
 1. ![Imagen1](./public/img/imagen1.png)
 2. ![Imagen2](./public/img/imagen2.png)
 3. ![Imagen3](./public/img/imagen3.png)
+4. ![Imagen4](./public/img/imagen4.png)
+5. ![Imagen5](./public/img/imagen5.png)
 
 ---
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader } from '../components/ui/loader';
 import { ErrorMessage } from '../components/ui/error-message';
 import { Carousel } from '../components/ui/carousel';
@@ -8,6 +9,7 @@ import { FaSearch, FaMicrophone, FaRobot, FaRocket, FaMeteor, FaNewspaper } from
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ApodResponse } from './types/nasa';
 import Link from "next/link";
+import { useAssemblyTranscription } from '../hooks/useAssemblyTranscription';
 
 const FEATURES = [
   {
@@ -30,24 +32,89 @@ const FEATURES = [
   }
 ];
 
+const KEYWORDS = {
+  planets: ['mercurio', 'venus', 'tierra', 'marte', 'jupiter', 'saturno', 'urano', 'neptuno'],
+};
+
+const PLANETAS = ['mercurio', 'venus', 'tierra', 'marte', 'jupiter', 'saturno', 'urano', 'neptuno'];
+
 export default function HomePage() {
+  const router = useRouter();
   const [data, setData] = useState<ApodResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [stars, setStars] = useState<
     { width: number; height: number; top: number; left: number; opacity: number; delay: number }[]
   >([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const API_KEY = process.env.NASA_API_KEY || 'DEMO_KEY';
+  const API_KEY = process.env.NEXT_PUBLIC_NASA_API_KEY || 'DEMO_KEY';
+
+  const { transcript, startRecording, stopRecording, isRecording, status, error } = useAssemblyTranscription();
+ 
+
+  function handleSearch(query: string) {
+  const texto = query.toLowerCase();
+  const contienePalabraPlaneta = texto.includes('planeta');
+  const planetaDetectado = KEYWORDS.planets.find((p) => texto.includes(p));
+  const contieneAsteroides = texto.includes('asteroide');
+
+  let destino: string | null = null;
+
+  if (contienePalabraPlaneta && planetaDetectado) {
+    destino = `/planets/${planetaDetectado}`;
+  } else if (contienePalabraPlaneta) {
+    destino = `/planets`;
+  } else if (planetaDetectado) {
+    destino = `/planets/${planetaDetectado}`;
+  } else if (contieneAsteroides) {
+    destino = `/asteroids`;
+  }
+
+  if (destino && window.location.pathname !== destino) {
+    router.push(destino);
+  }
+}
+
+useEffect(() => {
+  if (transcript) {
+    setSearchQuery(transcript);
+    searchRef.current?.focus();
+    handleSearch(transcript);
+  }
+}, [transcript, router]);
+
+
+  // Detectar y redirigir cuando se detecta una transcripción
+  useEffect(() => {
+    if (transcript) {
+      const texto = transcript.toLowerCase();
+
+      setSearchQuery(transcript);
+      searchRef.current?.focus();
+
+      const contieneAsteroides = texto.includes('asteroide');
+      const contienePalabraPlaneta = texto.includes('planeta');
+      const planetaDetectado = PLANETAS.find((p) => texto.includes(p));
+
+      if (contienePalabraPlaneta && planetaDetectado) {
+        router.push(`/planets/${planetaDetectado}`);
+      } else if (contienePalabraPlaneta) {
+        router.push(`/planets`);
+      } else if (planetaDetectado) {
+        router.push(`/planets/${planetaDetectado}`);
+      }else if(contieneAsteroides){
+        router.push(`/asteroids`);
+      }
+    }
+  }, [transcript, router]);
 
   useEffect(() => {
     const fetchApodImages = async () => {
       try {
         setLoading(true);
-        setError(null);
+        setFetchError(null);
 
         const cached = localStorage.getItem('apod_images');
         if (cached) {
@@ -64,7 +131,7 @@ export default function HomePage() {
         setData(onlyImages);
         localStorage.setItem('apod_images', JSON.stringify(onlyImages));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido');
+        setFetchError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
         setLoading(false);
       }
@@ -87,17 +154,9 @@ export default function HomePage() {
     setStars(generateStars());
   }, []);
 
-  const handleVoiceSearch = () => {
-    setIsListening(true);
-    setTimeout(() => {
-      setSearchQuery('Lluvia de estrellas en la Tierra');
-      setIsListening(false);
-    }, 2000);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black overflow-hidden">
-      {/* Efecto de estrellas en el fondo */}
+  
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         {stars.map((star, i) => (
           <div
@@ -116,7 +175,6 @@ export default function HomePage() {
       </div>
 
       <main className="relative z-10">
-        {/* Hero Section */}
         <section className="py-20 px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -131,50 +189,84 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          {/* Barra de búsqueda */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.5 }}
             className="max-w-2xl mx-auto relative"
           >
-            <div className="relative flex items-center">
-              <input
-                ref={searchRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar en el cosmos..."
-                className="w-full py-4 px-6 pr-16 rounded-full bg-gray-800 border border-gray-700 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 text-white text-lg transition-all"
-              />
-              <div className="absolute right-2 flex space-x-2">
-                <button
-                  onClick={handleVoiceSearch}
-                  className={`p-3 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : 'bg-gray-700 hover:bg-gray-600'} transition-colors`}
-                  title="Búsqueda por voz"
-                >
-                  <FaMicrophone className="text-white" />
-                </button>
-                <button className="p-3 rounded-full bg-cyan-600 hover:bg-cyan-500 transition-colors" title="Buscar">
-                  <FaSearch className="text-white" />
-                </button>
-              </div>
+             <div className="relative flex items-center">
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar en el cosmos..."
+              className="w-full py-4 px-6 pr-16 rounded-full bg-gray-800 border border-gray-700 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 text-white text-lg transition-all"
+            />
+            <div className="absolute right-2 flex space-x-2">
+              <button
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onMouseLeave={() => isRecording && stopRecording()}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                className={`p-3 rounded-full transition-colors ${
+                  isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+                title="Búsqueda por voz"
+                aria-pressed={isRecording}
+              >
+                <FaMicrophone className="text-white" />
+              </button>
+              <button
+                onClick={() => handleSearch(searchQuery)}
+                className="p-3 rounded-full bg-cyan-600 hover:bg-cyan-500 transition-colors"
+                title="Buscar"
+              >
+                <FaSearch className="text-white" />
+              </button>
+
+
             </div>
-            <AnimatePresence>
-              {isListening && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg p-4 shadow-lg"
-                >
-                  <div className="flex items-center space-x-2 text-cyan-400">
-                    <FaMicrophone className="animate-pulse" />
-                    <span>Escuchando...</span>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          </div>
+          <AnimatePresence>
+            {(status === 'listening' || status === 'processing' || status === 'done' || status === 'error') && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg p-4 shadow-lg"
+              >
+                <div className="flex items-center space-x-2 text-cyan-400">
+                  {status === 'listening' && (
+                    <>
+                      <FaMicrophone className="animate-pulse" />
+                      <span>Escuchando...</span>
+                    </>
+                  )}
+                  {status === 'processing' && (
+                    <>
+                      <FaRocket className="animate-spin" />
+                      <span>Procesando audio...</span>
+                    </>
+                  )}
+                  {status === 'done' && (
+                    <>
+                      <FaSearch />
+                      <span>Texto detectado: "{transcript}"</span>
+                    </>
+                  )}
+                  {status === 'error' && (
+                    <>
+                      <FaSearch />
+                      <span className="text-red-400">Error: {error}</span>
+                    </>
+                  )}
+                </div>
+          </motion.div>
+            )}
+          </AnimatePresence>
           </motion.div>
         </section>
 
@@ -219,7 +311,7 @@ export default function HomePage() {
             </h2>
 
             {loading && <Loader message="Cargando imágenes del cosmos..." />}
-            {error && <ErrorMessage message={error} onRetry={() => location.reload()} />}
+            {fetchError && <ErrorMessage message={fetchError} onRetry={() => location.reload()} />}
 
             {!loading && data.length > 0 && (
               <motion.div

@@ -144,7 +144,7 @@ export const planets: Planet[] = [
     ]
   },
   {
-    name: "Júpiter",
+    name: "Jupiter",
     order: 5,
     type: "Gaseoso",
     distanceFromSun: {

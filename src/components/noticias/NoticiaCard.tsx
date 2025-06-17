@@ -21,7 +21,15 @@ export default function NoticiaCard({ title, description, imageUrl, nasaLink }: 
   const dispatch = useDispatch<AppDispatch>();
   const readLaterItems = useSelector((state: RootState) => state.readLater.items);
 
-  const isInReadLater = readLaterItems.some(item => item.nasaLink === nasaLink);
+  //Limpiar nasaLink duplicado
+  const getCleanNasaLink = (url: string) => {
+    const match = url.match(/\/image\/([^/]+)/); // extrae SSC-20250111-s00049
+    const id = match?.[1];
+    return id ? `https://images.nasa.gov/details/${id}` : url;
+  };
+
+  const cleanLink = getCleanNasaLink(nasaLink);
+  const isInReadLater = readLaterItems.some(item => item.nasaLink === cleanLink);
 
   const [translatedTitle, setTranslatedTitle] = useState<string | null>(null);
   const [translatedDesc, setTranslatedDesc] = useState<string | null>(null);
@@ -102,9 +110,14 @@ export default function NoticiaCard({ title, description, imageUrl, nasaLink }: 
 
   const toggleReadLater = () => {
     if (isInReadLater) {
-      dispatch(removeFromReadLater(nasaLink));
+      dispatch(removeFromReadLater(cleanLink));
     } else {
-      dispatch(addToReadLater({ title, description, imageUrl, nasaLink }));
+      dispatch(addToReadLater({
+        title,
+        description,
+        imageUrl,
+        nasaLink: cleanLink,
+      }));
     }
   };
 
@@ -164,7 +177,6 @@ export default function NoticiaCard({ title, description, imageUrl, nasaLink }: 
             {speaking ? 'Detener' : 'Escuchar'}
           </button>
 
-          {/* Botón "leer más tarde" */}
           <button
             onClick={toggleReadLater}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isInReadLater
@@ -178,7 +190,7 @@ export default function NoticiaCard({ title, description, imageUrl, nasaLink }: 
           </button>
 
           <a
-            href={nasaLink}
+            href={cleanLink}
             target="_blank"
             rel="noopener noreferrer"
             className="ml-auto flex items-center gap-1 px-3 py-2 rounded-lg text-sm bg-gray-700/50 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors"

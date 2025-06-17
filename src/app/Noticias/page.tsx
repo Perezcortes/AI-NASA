@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
@@ -20,11 +20,13 @@ export default function NoticiasPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // Obtener cantidad de noticias "leer más tarde" desde Redux
   const readLaterCount = useSelector((state: RootState) => state.readLater.items.length);
 
   useEffect(() => {
+    setIsClient(true);
+
     const fetchNoticias = async () => {
       try {
         setLoading(true);
@@ -32,9 +34,7 @@ export default function NoticiasPage() {
           'https://images-api.nasa.gov/search?q=news&media_type=image&year_start=2025'
         );
 
-        if (!res.ok) {
-          throw new Error('Error al cargar noticias');
-        }
+        if (!res.ok) throw new Error('Error al cargar noticias');
 
         const data = await res.json();
         const results = data.collection.items
@@ -44,7 +44,9 @@ export default function NoticiasPage() {
             title: item.data[0].title,
             description: item.data[0].description || 'Descripción no disponible',
             imageUrl: item.links[0].href,
-            nasaLink: `https://www.nasa.gov${item.href}` || '#',
+            //nasaLink: `https://www.nasa.gov${item.href}` || '#', item.href puede ser una URL completa ya, o peor, algo como: /asset/GSFC_20230612_Archive/metadata.json
+            nasaLink: `https://images.nasa.gov/details/${item.data[0].nasa_id}` //nasa_id y redirige al sitio oficial con este patrón garantiza que siempre apunte a una página HTML válida y visible
+            ,
           }));
 
         setNoticias(results);
@@ -70,12 +72,14 @@ export default function NoticiasPage() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold text-white">Noticias</h1>
 
-          <button
-            onClick={() => setModalOpen(true)}
-            className="bg-cyan-600 hover:bg-cyan-700 px-4 py-2 rounded text-white"
-          >
-            Leer más tarde ({readLaterCount})
-          </button>
+          {isClient && (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="bg-cyan-600 hover:bg-cyan-700 px-4 py-2 rounded text-white"
+            >
+              Leer más tarde ({readLaterCount})
+            </button>
+          )}
         </div>
 
         <NoticiasHeader onSearch={setSearchTerm} />
@@ -93,7 +97,6 @@ export default function NoticiasPage() {
         )}
 
         <NoticiasGrid noticias={filteredNoticias} loading={loading} />
-
         <ReadLaterModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
       </div>
     </main>

@@ -28,7 +28,7 @@ const FEATURES = [
     icon: <FaNewspaper className="text-4xl text-yellow-400" />,
     title: "Últimas Noticias",
     description: "Mantente al día con los descubrimientos más recientes de la NASA",
-    href: "/news"
+    href: "/noticias"
   }
 ];
 

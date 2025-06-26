@@ -2,6 +2,8 @@
 
 Este proyecto es una plataforma web interactiva que permite explorar el universo utilizando comandos de voz. Aprovechamos la **API de la NASA** y la **Web Speech API** para brindar una experiencia futurista e inmersiva.
 
+🔗 **Demo en línea:** [https://ai-nasa.vercel.app](https://ai-nasa.vercel.app)
+
 ---
 
 ## 👨‍🚀 Características Principales

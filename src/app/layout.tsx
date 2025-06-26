@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
 import { RootProvider } from "./RootProvider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,6 +26,9 @@ export default function RootLayout({
           <main className="flex-grow">{children}</main>
           <Footer />
         </RootProvider>
+
+        {/* Aquí SpeedInsights */}
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -47,44 +47,63 @@ export default function HomePage() {
   const [stars, setStars] = useState<
     { width: number; height: number; top: number; left: number; opacity: number; delay: number }[]
   >([]);
+  const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    message: string;
+    action?: () => void;
+  } | null>(null);
+  
   const searchRef = useRef<HTMLInputElement>(null);
 
   const API_KEY = process.env.NEXT_PUBLIC_NASA_API_KEY || 'DEMO_KEY';
 
   const { transcript, startRecording, stopRecording, isRecording, status, error } = useAssemblyTranscription();
- 
 
   function handleSearch(query: string) {
-  const texto = query.toLowerCase();
-  const contienePalabraPlaneta = texto.includes('planeta');
-  const planetaDetectado = KEYWORDS.planets.find((p) => texto.includes(p));
-  const contieneAsteroides = texto.includes('asteroide');
+    const texto = query.toLowerCase();
+    const contienePalabraPlaneta = texto.includes('planeta');
+    const planetaDetectado = KEYWORDS.planets.find((p) => texto.includes(p));
+    const contieneAsteroides = texto.includes('asteroide');
 
-  let destino: string | null = null;
+    let destino: string | null = null;
 
-  if (contienePalabraPlaneta && planetaDetectado) {
-    destino = `/planets/${planetaDetectado}`;
-  } else if (contienePalabraPlaneta) {
-    destino = `/planets`;
-  } else if (planetaDetectado) {
-    destino = `/planets/${planetaDetectado}`;
-  } else if (contieneAsteroides) {
-    destino = `/asteroids`;
+    if (contienePalabraPlaneta && planetaDetectado) {
+      destino = `/planets/${planetaDetectado}`;
+    } else if (contienePalabraPlaneta) {
+      destino = `/planets`;
+    } else if (planetaDetectado) {
+      destino = `/planets/${planetaDetectado}`;
+    } else if (contieneAsteroides) {
+      destino = `/asteroids`;
+    }
+
+    if (destino) {
+      router.push(destino);
+    } else {
+      setModalContent({
+        title: "Búsqueda no encontrada",
+        message: 'No se encontró información sobre tu búsqueda. Intenta con términos como "planeta marte" o "asteroides".',
+        action: () => setShowModal(false)
+      });
+      setShowModal(true);
+      setSearchQuery('');
+    }
   }
 
-  if (destino && window.location.pathname !== destino) {
-    router.push(destino);
-  }
-}
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch(searchQuery);
+    }
+  };
 
-useEffect(() => {
-  if (transcript) {
-    setSearchQuery(transcript);
-    searchRef.current?.focus();
-    handleSearch(transcript);
-  }
-}, [transcript, router]);
-
+  useEffect(() => {
+    if (transcript) {
+      setSearchQuery(transcript);
+      searchRef.current?.focus();
+      handleSearch(transcript);
+    }
+  }, [transcript, router]);
 
   // Detectar y redirigir cuando se detecta una transcripción
   useEffect(() => {
@@ -104,7 +123,7 @@ useEffect(() => {
         router.push(`/planets`);
       } else if (planetaDetectado) {
         router.push(`/planets/${planetaDetectado}`);
-      }else if(contieneAsteroides){
+      } else if (contieneAsteroides) {
         router.push(`/asteroids`);
       }
     }
@@ -156,7 +175,7 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black overflow-hidden">
-  
+
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         {stars.map((star, i) => (
           <div
@@ -195,78 +214,77 @@ useEffect(() => {
             transition={{ delay: 0.3, duration: 0.5 }}
             className="max-w-2xl mx-auto relative"
           >
-             <div className="relative flex items-center">
-            <input
-              ref={searchRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar en el cosmos..."
-              className="w-full py-4 px-6 pr-16 rounded-full bg-gray-800 border border-gray-700 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 text-white text-lg transition-all"
-            />
-            <div className="absolute right-2 flex space-x-2">
-              <button
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-                onMouseLeave={() => isRecording && stopRecording()}
-                onTouchStart={startRecording}
-                onTouchEnd={stopRecording}
-                className={`p-3 rounded-full transition-colors ${
-                  isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-                title="Búsqueda por voz"
-                aria-pressed={isRecording}
-              >
-                <FaMicrophone className="text-white" />
-              </button>
-              <button
-                onClick={() => handleSearch(searchQuery)}
-                className="p-3 rounded-full bg-cyan-600 hover:bg-cyan-500 transition-colors"
-                title="Buscar"
-              >
-                <FaSearch className="text-white" />
-              </button>
+            <div className="relative flex items-center">
+              <input
+                ref={searchRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Buscar en el cosmos..."
+                className="w-full py-4 px-6 pr-16 rounded-full bg-gray-800 border border-gray-700 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 text-white text-lg transition-all"
+              />
 
-
+              <div className="absolute right-2 flex space-x-2">
+                <button
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                  onMouseLeave={() => isRecording && stopRecording()}
+                  onTouchStart={startRecording}
+                  onTouchEnd={stopRecording}
+                  className={`p-3 rounded-full transition-colors ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-700 hover:bg-gray-600'
+                    }`}
+                  title="Búsqueda por voz"
+                  aria-pressed={isRecording}
+                >
+                  <FaMicrophone className="text-white" />
+                </button>
+                <button
+                  onClick={() => handleSearch(searchQuery)}
+                  className="p-3 rounded-full bg-cyan-600 hover:bg-cyan-500 transition-colors"
+                  title="Buscar"
+                >
+                  <FaSearch className="text-white" />
+                </button>
+              </div>
             </div>
-          </div>
-          <AnimatePresence>
-            {(status === 'listening' || status === 'processing' || status === 'done' || status === 'error') && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg p-4 shadow-lg"
-              >
-                <div className="flex items-center space-x-2 text-cyan-400">
-                  {status === 'listening' && (
-                    <>
-                      <FaMicrophone className="animate-pulse" />
-                      <span>Escuchando...</span>
-                    </>
-                  )}
-                  {status === 'processing' && (
-                    <>
-                      <FaRocket className="animate-spin" />
-                      <span>Procesando audio...</span>
-                    </>
-                  )}
-                  {status === 'done' && (
-                    <>
-                      <FaSearch />
-                      <span>Texto detectado: "{transcript}"</span>
-                    </>
-                  )}
-                  {status === 'error' && (
-                    <>
-                      <FaSearch />
-                      <span className="text-red-400">Error: {error}</span>
-                    </>
-                  )}
-                </div>
-          </motion.div>
-            )}
-          </AnimatePresence>
+            <AnimatePresence>
+              {(status === 'listening' || status === 'processing' || status === 'done' || status === 'error') && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-gray-800 rounded-lg p-4 shadow-lg"
+                >
+                  <div className="flex items-center space-x-2 text-cyan-400">
+                    {status === 'listening' && (
+                      <>
+                        <FaMicrophone className="animate-pulse" />
+                        <span>Escuchando...</span>
+                      </>
+                    )}
+                    {status === 'processing' && (
+                      <>
+                        <FaRocket className="animate-spin" />
+                        <span>Procesando audio...</span>
+                      </>
+                    )}
+                    {status === 'done' && (
+                      <>
+                        <FaSearch />
+                        <span>Texto detectado: "{transcript}"</span>
+                      </>
+                    )}
+                    {status === 'error' && (
+                      <>
+                        <FaSearch />
+                        <span className="text-red-400">Error: {error}</span>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </section>
 
@@ -363,6 +381,38 @@ useEffect(() => {
             </div>
           </div>
         </section>
+
+        {/* Modal para mensajes */}
+        <AnimatePresence>
+          {showModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-gray-800 rounded-xl max-w-md w-full p-6 border border-gray-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-2xl font-bold text-cyan-400 mb-4">{modalContent?.title}</h3>
+                <p className="text-gray-300 mb-6">{modalContent?.message}</p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
